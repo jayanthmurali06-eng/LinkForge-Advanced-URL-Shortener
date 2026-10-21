@@ -1,0 +1,146 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>LinkForge — Advanced URL Shortener</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+</head>
+
+<body>
+    <main class="container">
+
+        <div class="brand">LinkForge<span>.</span></div>
+
+        <p class="eyebrow">YOUR LINKS, SIMPLIFIED</p>
+
+        <h1>
+            Long URLs.<br>
+            <span>Short solutions.</span>
+        </h1>
+
+        <p class="subtitle">
+            Turn long, messy links into clean, shareable URLs.
+        </p>
+
+        <form method="POST" action="{{ url_for('main.index') }}">
+
+            <label for="url">Paste your destination URL</label>
+
+            <input
+                type="url"
+                id="url"
+                name="url"
+                placeholder="https://example.com/your-long-link"
+                required
+            >
+
+            <button type="submit">
+                Shorten URL ↗
+            </button>
+
+        </form>
+
+        {% if short_url %}
+        <section class="result" aria-live="polite">
+
+            <p>Your shortened link is ready!</p>
+
+            <div class="short-link-display">
+                <a
+                    id="shortUrl"
+                    href="{{ short_url }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >{{ short_url }}</a>
+            </div>
+
+            <button
+                type="button"
+                class="copy-button"
+                id="copyButton"
+            >
+                Copy link
+            </button>
+
+            <p id="copyMessage" role="status"></p>
+
+        </section>
+        {% endif %}
+
+        {% if error %}
+        <p class="error" role="alert">{{ error }}</p>
+        {% endif %}
+
+        <footer>
+            Built with Flask &amp; SQLite · LinkForge
+        </footer>
+
+    </main>
+
+    {% if short_url %}
+    <script>
+        const shortUrl = {{ short_url | tojson }};
+        const copyButton = document.getElementById("copyButton");
+        const copyMessage = document.getElementById("copyMessage");
+
+        copyButton.addEventListener("click", async function () {
+            copyButton.disabled = true;
+            copyButton.textContent = "Copying...";
+            copyMessage.textContent = "";
+
+            try {
+                // Preferred method for secure browser contexts.
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(shortUrl);
+                } else {
+                    // Fallback for browsers that do not support Clipboard API.
+                    const textArea = document.createElement("textarea");
+                    textArea.value = shortUrl;
+                    textArea.setAttribute("readonly", "");
+                    textArea.style.position = "fixed";
+                    textArea.style.left = "-9999px";
+                    textArea.style.top = "0";
+
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+
+                    const successful = document.execCommand("copy");
+                    textArea.remove();
+
+                    if (!successful) {
+                        throw new Error("Automatic copy unavailable");
+                    }
+                }
+
+                copyButton.textContent = "Copied!";
+                copyMessage.textContent =
+                    "Your shortened link has been copied.";
+
+            } catch (error) {
+                // Reliable manual fallback if clipboard access is blocked.
+                copyButton.textContent = "Copy manually";
+                copyMessage.textContent =
+                    "Automatic copying was blocked. Copy the URL from the dialog.";
+
+                window.prompt(
+                    "Select and copy your shortened link:",
+                    shortUrl
+                );
+
+            } finally {
+                copyButton.disabled = false;
+            }
+        });
+    </script>
+    {% endif %}
+
+</body>
+</html>
