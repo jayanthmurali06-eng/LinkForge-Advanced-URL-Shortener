@@ -32,7 +32,7 @@ def get_db():
 
 
 def init_db():
-    """Create the table and migrate older databases safely."""
+    """Create the links table and safely migrate older databases."""
     with get_db() as db:
         db.execute("""
             CREATE TABLE IF NOT EXISTS links (
@@ -59,15 +59,16 @@ def init_db():
 
 
 def generate_code(length=7):
-    """Generate a random short URL code."""
+    """Generate a random short code."""
     characters = string.ascii_letters + string.digits
     return "".join(
-        secrets.choice(characters) for _ in range(length)
+        secrets.choice(characters)
+        for _ in range(length)
     )
 
 
 def is_valid_url(value):
-    """Allow valid HTTP and HTTPS URLs."""
+    """Accept HTTP and HTTPS URLs with a valid hostname."""
     try:
         parsed = urlparse(value)
 
@@ -75,23 +76,25 @@ def is_valid_url(value):
             parsed.scheme in ("http", "https")
             and bool(parsed.hostname)
             and not any(char.isspace() for char in value)
+            and parsed.port != 0
         )
     except (ValueError, TypeError):
         return False
 
 
 def format_ist(timestamp):
-    """Convert SQLite UTC timestamps to Indian Standard Time."""
+    """Convert a SQLite UTC timestamp to Indian Standard Time."""
     if not timestamp:
         return ""
 
     try:
-        utc_time = datetime.strptime(
-            timestamp, "%Y-%m-%d %H:%M:%S"
-        ).replace(tzinfo=UTC)
+        parsed = datetime.fromisoformat(str(timestamp))
 
-        return utc_time.astimezone(IST).strftime(
-            "%d %b %Y, %I:%M:%S %p IST"
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=UTC)
+
+        return parsed.astimezone(IST).strftime(
+            "%d %b %Y, %I:%M %p"
         )
     except (ValueError, TypeError):
         return str(timestamp)
@@ -131,7 +134,10 @@ def index():
                         break
 
                 if code is None:
-                    error = "Could not generate a link. Please try again."
+                    error = (
+                        "Could not generate a link. "
+                        "Please try again."
+                    )
                 else:
                     db.execute(
                         """
@@ -159,55 +165,60 @@ def analytics():
     init_db()
 
     with get_db() as db:
-        summary = db.execute("""
-            SELECT
-                COUNT(*) AS total_links,
-                COALESCE(SUM(clicks), 0) AS total_clicks
-            FROM links
-        """).fetchone()
+        total_links = db.execute(
+            "SELECT COUNT(*) FROM links"
+        ).fetchone()[0]
 
-        rows = db.execute("""
-            SELECT code, original_url, created_at, clicks
+        total_clicks = db.execute(
+            "SELECT COALESCE(SUM(clicks), 0) FROM links"
+        ).fetchone()[0]
+
+        popular_links = db.execute("""
+            SELECT id, code, original_url, created_at, clicks
             FROM links
-            ORDER BY clicks DESC, created_at DESC
+            ORDER BY clicks DESC, id DESC
         """).fetchall()
 
-    popular_links = []
+    links_for_template = []
 
-    for row in rows:
-        link = dict(row)
-
-        link["created_at"] = format_ist(
-            link.get("created_at")
-        )
-
-        link["short_url"] = (
-            request.url_root.rstrip("/")
-            + "/"
-            + link["code"]
-        )
-
-        popular_links.append(link)
+    for link in popular_links:
+        item = dict(link)
+        item["created_at"] = format_ist(item["created_at"])
+        links_for_template.append(item)
 
     return render_template(
         "analytics.html",
-        total_links=summary["total_links"],
-        total_clicks=summary["total_clicks"],
-        popular_links=popular_links,
+        total_links=total_links,
+        total_clicks=total_clicks,
+        popular_links=links_for_template,
     )
+
+
+@main.route("/delete/<code>", methods=["POST"])
+def delete_link(code):
+    """Delete a short link selected from the analytics dashboard."""
+    init_db()
+
+    with get_db() as db:
+        result = db.execute(
+            "DELETE FROM links WHERE code = ?",
+            (code,),
+        )
+
+        if result.rowcount == 0:
+            abort(404)
+
+    return redirect(url_for("main.analytics"))
 
 
 @main.route("/<code>", methods=["GET"])
 def redirect_to_original(code):
+    """Redirect to the destination and record the click."""
     init_db()
 
     with get_db() as db:
         link = db.execute(
-            """
-            SELECT original_url
-            FROM links
-            WHERE code = ?
-            """,
+            "SELECT original_url FROM links WHERE code = ?",
             (code,),
         ).fetchone()
 
@@ -217,11 +228,7 @@ def redirect_to_original(code):
         original_url = link["original_url"]
 
         db.execute(
-            """
-            UPDATE links
-            SET clicks = clicks + 1
-            WHERE code = ?
-            """,
+            "UPDATE links SET clicks = clicks + 1 WHERE code = ?",
             (code,),
         )
 

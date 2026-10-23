@@ -1,145 +1,173 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>LinkForge — Advanced URL Shortener</title>
-
-    <link
-        rel="stylesheet"
-        href="{{ url_for('static', filename='style.css') }}"
-    >
+    <meta name="theme-color" content="#f5f7fb">
+    <title>LinkForge | Advanced URL Shortener</title>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
 </head>
-
 <body>
-    <main class="container">
+    <main class="page">
+        <nav class="navbar">
+            <a class="brand" href="{{ url_for('main.index') }}">
+                <span class="brand-icon">L</span>
+                LinkForge
+            </a>
+            <a class="nav-link" href="{{ url_for('main.analytics') }}">
+                Analytics
+            </a>
+        </nav>
 
-        <div class="brand">LinkForge<span>.</span></div>
+        <section class="hero">
+            <div class="eyebrow">SIMPLE LINKS. MEANINGFUL ANALYTICS.</div>
+            <h1>Shorten links.<br><span>Expand possibilities.</span></h1>
+            <p class="hero-description">
+                Turn long URLs into clean, shareable links and track
+                how many people click them.
+            </p>
 
-        <p class="eyebrow">YOUR LINKS, SIMPLIFIED</p>
+            <div class="shortener-card">
+                <h2>Create a short link</h2>
+                <p class="card-description">
+                    Paste your destination URL below to get started.
+                </p>
 
-        <h1>
-            Long URLs.<br>
-            <span>Short solutions.</span>
-        </h1>
+                <form method="POST" action="{{ url_for('main.index') }}">
+                    <label for="url">Destination URL</label>
+                    <div class="input-wrap">
+                        <span class="input-icon">↗</span>
+                        <input
+                            type="url"
+                            id="url"
+                            name="url"
+                            placeholder="https://example.com/your-long-url"
+                            autocomplete="url"
+                            required
+                        >
+                    </div>
+                    <button class="primary-button" type="submit">
+                        Shorten URL <span aria-hidden="true">→</span>
+                    </button>
+                </form>
 
-        <p class="subtitle">
-            Turn long, messy links into clean, shareable URLs.
-        </p>
+                {% if error %}
+                <div class="message error-message" role="alert">
+                    {{ error }}
+                </div>
+                {% endif %}
 
-        <form method="POST" action="{{ url_for('main.index') }}">
+                {% if short_url %}
+                <section class="result-card" aria-live="polite">
+                    <div class="result-heading">
+                        <span class="success-icon">✓</span>
+                        <div>
+                            <h3>Your short link is ready!</h3>
+                            <p>Copy it and share it anywhere.</p>
+                        </div>
+                    </div>
 
-            <label for="url">Paste your destination URL</label>
-
-            <input
-                type="url"
-                id="url"
-                name="url"
-                placeholder="https://example.com/your-long-link"
-                required
-            >
-
-            <button type="submit">
-                Shorten URL ↗
-            </button>
-
-        </form>
-
-        {% if short_url %}
-        <section class="result" aria-live="polite">
-
-            <p>Your shortened link is ready!</p>
-
-            <div class="short-link-display">
-                <a
-                    id="shortUrl"
-                    href="{{ short_url }}"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >{{ short_url }}</a>
+                    <div class="result-row">
+                        <a id="shortUrl"
+                           class="short-url"
+                           href="{{ short_url }}">{{ short_url }}</a>
+                        <button type="button"
+                                class="copy-button"
+                                id="copyButton">
+                            Copy link
+                        </button>
+                    </div>
+                    <p id="copyStatus" class="copy-status"
+                       role="status" aria-live="polite"></p>
+                    <a class="open-link"
+                       href="{{ short_url }}"
+                       target="_blank"
+                       rel="noopener noreferrer">
+                        Open shortened link ↗
+                    </a>
+                </section>
+                {% endif %}
             </div>
 
-            <button
-                type="button"
-                class="copy-button"
-                id="copyButton"
-            >
-                Copy link
-            </button>
-
-            <p id="copyMessage" role="status"></p>
-
+            <div class="feature-grid">
+                <article class="feature">
+                    <span class="feature-icon">↗</span>
+                    <h3>Short & shareable</h3>
+                    <p>Make long URLs easier to share.</p>
+                </article>
+                <article class="feature">
+                    <span class="feature-icon">▥</span>
+                    <h3>Click analytics</h3>
+                    <p>Monitor clicks on your short links.</p>
+                </article>
+                <article class="feature">
+                    <span class="feature-icon">⌁</span>
+                    <h3>Easy management</h3>
+                    <p>Review and remove links from your dashboard.</p>
+                </article>
+            </div>
         </section>
-        {% endif %}
 
-        {% if error %}
-        <p class="error" role="alert">{{ error }}</p>
-        {% endif %}
-
-        <footer>
-            Built with Flask &amp; SQLite · LinkForge
+        <footer class="site-footer">
+            Built with Flask and SQLite · LinkForge
         </footer>
-
     </main>
 
-    {% if short_url %}
     <script>
-        const shortUrl = {{ short_url | tojson }};
         const copyButton = document.getElementById("copyButton");
-        const copyMessage = document.getElementById("copyMessage");
+        const shortUrlElement = document.getElementById("shortUrl");
+        const copyStatus = document.getElementById("copyStatus");
 
-        copyButton.addEventListener("click", async function () {
-            copyButton.disabled = true;
-            copyButton.textContent = "Copying...";
-            copyMessage.textContent = "";
+        if (copyButton && shortUrlElement && copyStatus) {
+            copyButton.addEventListener("click", async () => {
+                const text = shortUrlElement.href;
 
-            try {
-                // Preferred method for secure browser contexts.
-                if (navigator.clipboard && window.isSecureContext) {
-                    await navigator.clipboard.writeText(shortUrl);
-                } else {
-                    // Fallback for browsers that do not support Clipboard API.
-                    const textArea = document.createElement("textarea");
-                    textArea.value = shortUrl;
-                    textArea.setAttribute("readonly", "");
-                    textArea.style.position = "fixed";
-                    textArea.style.left = "-9999px";
-                    textArea.style.top = "0";
+                try {
+                    if (navigator.clipboard && window.isSecureContext) {
+                        await navigator.clipboard.writeText(text);
+                    } else {
+                        throw new Error("Clipboard API unavailable");
+                    }
 
-                    document.body.appendChild(textArea);
-                    textArea.focus();
-                    textArea.select();
+                    copyStatus.textContent = "Link copied successfully!";
+                    copyButton.textContent = "Copied!";
+                } catch (error) {
+                    const temporaryInput = document.createElement("textarea");
+                    temporaryInput.value = text;
+                    temporaryInput.setAttribute("readonly", "");
+                    temporaryInput.style.position = "fixed";
+                    temporaryInput.style.opacity = "0";
+                    document.body.appendChild(temporaryInput);
+                    temporaryInput.select();
+                    temporaryInput.setSelectionRange(0, text.length);
 
-                    const successful = document.execCommand("copy");
-                    textArea.remove();
+                    let copied = false;
 
-                    if (!successful) {
-                        throw new Error("Automatic copy unavailable");
+                    try {
+                        copied = document.execCommand("copy");
+                    } catch (fallbackError) {
+                        copied = false;
+                    }
+
+                    temporaryInput.remove();
+
+                    if (copied) {
+                        copyStatus.textContent = "Link copied successfully!";
+                        copyButton.textContent = "Copied!";
+                    } else {
+                        copyStatus.textContent =
+                            "Copy was blocked. Select and copy the link manually.";
+                        copyButton.textContent = "Try again";
                     }
                 }
 
-                copyButton.textContent = "Copied!";
-                copyMessage.textContent =
-                    "Your shortened link has been copied.";
-
-            } catch (error) {
-                // Reliable manual fallback if clipboard access is blocked.
-                copyButton.textContent = "Copy manually";
-                copyMessage.textContent =
-                    "Automatic copying was blocked. Copy the URL from the dialog.";
-
-                window.prompt(
-                    "Select and copy your shortened link:",
-                    shortUrl
-                );
-
-            } finally {
-                copyButton.disabled = false;
-            }
-        });
+                window.setTimeout(() => {
+                    copyButton.textContent = "Copy link";
+                }, 2000);
+            });
+        }
     </script>
-    {% endif %}
-
 </body>
 </html>

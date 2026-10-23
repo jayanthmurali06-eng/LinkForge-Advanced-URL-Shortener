@@ -6,23 +6,17 @@
     <title>LinkForge | Analytics</title>
 
     <style>
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
             padding: 32px 20px;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-                         sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             background: #f5f7fb;
             color: #182230;
         }
 
-        .container {
-            max-width: 1150px;
-            margin: auto;
-        }
+        .container { max-width: 1150px; margin: auto; }
 
         header {
             display: flex;
@@ -33,24 +27,11 @@
             margin-bottom: 30px;
         }
 
-        h1 {
-            margin: 0 0 8px;
-            font-size: 32px;
-        }
+        h1 { margin: 0 0 8px; font-size: 32px; }
+        .subtitle { margin: 0; color: #697586; }
 
-        .subtitle {
-            margin: 0;
-            color: #697586;
-        }
-
-        a {
-            color: #4f46e5;
-            text-decoration: none;
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
+        a { color: #4f46e5; text-decoration: none; }
+        a:hover { text-decoration: underline; }
 
         .button {
             display: inline-block;
@@ -61,10 +42,7 @@
             font-weight: 600;
         }
 
-        .button:hover {
-            background: #4338ca;
-            text-decoration: none;
-        }
+        .button:hover { background: #4338ca; text-decoration: none; }
 
         .stats {
             display: grid;
@@ -73,62 +51,26 @@
             margin-bottom: 28px;
         }
 
-        .stat-card,
-        .table-card {
+        .stat-card, .table-card {
             background: white;
             border: 1px solid #e5e9f2;
             border-radius: 15px;
             box-shadow: 0 4px 15px rgba(20, 30, 55, 0.04);
         }
 
-        .stat-card {
-            padding: 24px;
-        }
+        .stat-card { padding: 24px; }
+        .stat-label { color: #697586; font-size: 14px; margin-bottom: 12px; }
+        .stat-number { font-size: 34px; font-weight: 750; letter-spacing: -1px; }
 
-        .stat-label {
-            color: #697586;
-            font-size: 14px;
-            margin-bottom: 12px;
-        }
+        .table-card { overflow: hidden; }
+        .table-heading { padding: 22px 24px; border-bottom: 1px solid #e5e9f2; }
+        .table-heading h2 { margin: 0 0 6px; font-size: 20px; }
+        .table-heading p { margin: 0; color: #697586; font-size: 14px; }
+        .table-scroll { overflow-x: auto; }
 
-        .stat-number {
-            font-size: 34px;
-            font-weight: 750;
-            letter-spacing: -1px;
-        }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
 
-        .table-card {
-            overflow: hidden;
-        }
-
-        .table-heading {
-            padding: 22px 24px;
-            border-bottom: 1px solid #e5e9f2;
-        }
-
-        .table-heading h2 {
-            margin: 0 0 6px;
-            font-size: 20px;
-        }
-
-        .table-heading p {
-            margin: 0;
-            color: #697586;
-            font-size: 14px;
-        }
-
-        .table-scroll {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-        }
-
-        th,
-        td {
+        th, td {
             padding: 16px 20px;
             border-bottom: 1px solid #edf0f5;
             vertical-align: top;
@@ -142,18 +84,10 @@
             letter-spacing: 0.5px;
         }
 
-        td {
-            font-size: 14px;
-        }
+        td { font-size: 14px; }
+        tr:last-child td { border-bottom: none; }
 
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        .url-cell {
-            max-width: 330px;
-            overflow-wrap: anywhere;
-        }
+        .url-cell { max-width: 330px; overflow-wrap: anywhere; }
 
         .click-count {
             display: inline-block;
@@ -166,11 +100,21 @@
             font-weight: 700;
         }
 
-        .empty {
-            padding: 35px;
-            text-align: center;
-            color: #697586;
+        .delete-form { margin: 0; }
+
+        .delete-button {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 9px 13px;
+            border-radius: 7px;
+            font-weight: 600;
+            cursor: pointer;
         }
+
+        .delete-button:hover { background: #b91c1c; }
+
+        .empty { padding: 35px; text-align: center; color: #697586; }
 
         footer {
             text-align: center;
@@ -180,17 +124,10 @@
         }
 
         @media (max-width: 650px) {
-            body {
-                padding: 22px 12px;
-            }
-
-            .stats {
-                grid-template-columns: 1fr;
-            }
-
-            h1 {
-                font-size: 27px;
-            }
+            body { padding: 22px 12px; }
+            .stats { grid-template-columns: 1fr; }
+            h1 { font-size: 27px; }
+            th, td { padding: 13px 12px; }
         }
     </style>
 </head>
@@ -236,6 +173,7 @@
                             <th>Destination URL</th>
                             <th>Clicks</th>
                             <th>Created (IST)</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
 
@@ -257,16 +195,25 @@
                             </td>
 
                             <td>
-                                <span class="click-count">
-                                    {{ link['clicks'] }}
-                                </span>
+                                <span class="click-count">{{ link['clicks'] }}</span>
                             </td>
 
                             <td>{{ link['created_at'] }}</td>
+
+                            <td>
+                                <form class="delete-form"
+                                      method="POST"
+                                      action="{{ url_for('main.delete_link', code=link['code']) }}"
+                                      onsubmit="return confirm('Permanently delete this short link?');">
+                                    <button type="submit" class="delete-button">
+                                        Delete
+                                    </button>
+                                </form>
+                            </td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="4" class="empty">
+                            <td colspan="5" class="empty">
                                 No links yet. Create your first short link
                                 to see analytics here.
                             </td>
