@@ -258,4 +258,3 @@ def redirect_to_original(code):
         )
 
     return redirect(original_url)
-
