@@ -1,3 +1,4 @@
+
 import sqlite3
 import secrets
 import string
@@ -26,13 +27,13 @@ IST = ZoneInfo("Asia/Kolkata")
 
 def get_db():
     """Connect to the existing SQLite database."""
-    db = sqlite3.connect(DB_PATH)
+    db = sqlite3.connect(DB_PATH, timeout=10)
     db.row_factory = sqlite3.Row
     return db
 
 
 def init_db():
-    """Create the links table and safely migrate older databases."""
+    """Create the links table and migrate older databases safely."""
     with get_db() as db:
         db.execute("""
             CREATE TABLE IF NOT EXISTS links (
@@ -59,8 +60,9 @@ def init_db():
 
 
 def generate_code(length=7):
-    """Generate a random short code."""
+    """Generate a cryptographically random short code."""
     characters = string.ascii_letters + string.digits
+
     return "".join(
         secrets.choice(characters)
         for _ in range(length)
@@ -68,16 +70,34 @@ def generate_code(length=7):
 
 
 def is_valid_url(value):
-    """Accept HTTP and HTTPS URLs with a valid hostname."""
+    """Accept well-formed HTTP and HTTPS URLs."""
+    if not isinstance(value, str) or not value:
+        return False
+
+    if any(char.isspace() for char in value):
+        return False
+
     try:
         parsed = urlparse(value)
 
-        return (
-            parsed.scheme in ("http", "https")
-            and bool(parsed.hostname)
-            and not any(char.isspace() for char in value)
-            and parsed.port != 0
-        )
+        if parsed.scheme.lower() not in ("http", "https"):
+            return False
+
+        if not parsed.hostname:
+            return False
+
+        # Avoid URLs containing embedded login credentials.
+        if parsed.username is not None or parsed.password is not None:
+            return False
+
+        # Accessing .port raises ValueError for malformed ports.
+        port = parsed.port
+
+        if port is not None and not (1 <= port <= 65535):
+            return False
+
+        return True
+
     except (ValueError, TypeError):
         return False
 
@@ -96,6 +116,7 @@ def format_ist(timestamp):
         return parsed.astimezone(IST).strftime(
             "%d %b %Y, %I:%M %p"
         )
+
     except (ValueError, TypeError):
         return str(timestamp)
 
@@ -112,15 +133,18 @@ def index():
 
         if not original_url:
             error = "Please enter a URL."
+
         elif not is_valid_url(original_url):
             error = (
                 "Enter a valid URL beginning with "
                 "http:// or https://."
             )
+
         else:
             with get_db() as db:
                 code = None
 
+                # Generate a unique code, retrying on collisions.
                 for _ in range(20):
                     candidate = generate_code()
 
@@ -138,6 +162,7 @@ def index():
                         "Could not generate a link. "
                         "Please try again."
                     )
+
                 else:
                     db.execute(
                         """
@@ -233,3 +258,4 @@ def redirect_to_original(code):
         )
 
     return redirect(original_url)
+
