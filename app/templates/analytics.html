@@ -163,7 +163,17 @@
             <div class="table-heading">
                 <h2>Your links</h2>
                 <p>Links with the most clicks appear first.</p>
+
+                <input
+                    type="search"
+                    id="linkSearch"
+                    placeholder="Search by short code or destination URL..."
+                    aria-label="Search shortened links"
+                    style="width: 100%; max-width: 480px; margin-top: 16px; padding: 12px; border: 1px solid #d5dbea; border-radius: 9px; font-size: 14px;"
+                >
+                <p id="searchStatus" role="status" aria-live="polite"></p>
             </div>
+
 
             <div class="table-scroll">
                 <table>
@@ -179,7 +189,7 @@
 
                     <tbody>
                         {% for link in popular_links %}
-                        <tr>
+                        <tr data-search="{{ (link['code'] ~ ' ' ~ link['original_url'])|lower }}">
                             <td>
                                 <a href="{{ url_for('main.redirect_to_original', code=link['code']) }}">
                                     {{ request.url_root.rstrip('/') }}/{{ link['code'] }}
@@ -228,5 +238,40 @@
             LinkForge · Simple links, meaningful analytics
         </footer>
     </main>
+
+
+    <script>
+        const searchInput = document.getElementById("linkSearch");
+        const searchStatus = document.getElementById("searchStatus");
+
+        searchInput.addEventListener("input", function () {
+            const query = this.value.trim().toLowerCase();
+
+            const rows = Array.from(
+                document.querySelectorAll("tbody tr[data-search]")
+            );
+
+            let visibleCount = 0;
+
+            rows.forEach(function (row) {
+                const matches = row.dataset.search.includes(query);
+
+                row.hidden = !matches;
+
+                if (matches) {
+                    visibleCount++;
+                }
+            });
+
+            if (query === "") {
+                searchStatus.textContent = "";
+            } else {
+                searchStatus.textContent =
+                    visibleCount + (visibleCount === 1
+                        ? " matching link"
+                        : " matching links");
+            }
+        });
+    </script>
 </body>
 </html>
