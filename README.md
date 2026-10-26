@@ -77,7 +77,6 @@ Manually tested functionality includes URL shortening, redirects, URL validation
 ## Future Enhancements
 
 - Custom short URL aliases
-- QR code generation
 - Link expiration dates
 - Additional analytics
 - Production deployment
