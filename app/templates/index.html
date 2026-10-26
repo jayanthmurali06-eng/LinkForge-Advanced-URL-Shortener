@@ -23,7 +23,9 @@
 
         <section class="hero">
             <div class="eyebrow">SIMPLE LINKS. MEANINGFUL ANALYTICS.</div>
+
             <h1>Shorten links.<br><span>Expand possibilities.</span></h1>
+
             <p class="hero-description">
                 Turn long URLs into clean, shareable links and track
                 how many people click them.
@@ -37,6 +39,7 @@
 
                 <form method="POST" action="{{ url_for('main.index') }}">
                     <label for="url">Destination URL</label>
+
                     <div class="input-wrap">
                         <span class="input-icon">↗</span>
                         <input
@@ -48,6 +51,7 @@
                             required
                         >
                     </div>
+
                     <button class="primary-button" type="submit">
                         Shorten URL <span aria-hidden="true">→</span>
                     </button>
@@ -73,20 +77,45 @@
                         <a id="shortUrl"
                            class="short-url"
                            href="{{ short_url }}">{{ short_url }}</a>
+
                         <button type="button"
                                 class="copy-button"
                                 id="copyButton">
                             Copy link
                         </button>
                     </div>
-                    <p id="copyStatus" class="copy-status"
-                       role="status" aria-live="polite"></p>
+
+                    <p id="copyStatus"
+                       class="copy-status"
+                       role="status"
+                       aria-live="polite"></p>
+
                     <a class="open-link"
                        href="{{ short_url }}"
                        target="_blank"
                        rel="noopener noreferrer">
                         Open shortened link ↗
                     </a>
+
+                    <div class="qr-section">
+                        <h3>Share with QR code</h3>
+                        <p>Scan this code to open your shortened link.</p>
+
+                        <img
+                            class="qr-image"
+                            src="{{ url_for('main.generate_qr', code=short_code) }}"
+                            alt="QR code for your shortened link"
+                            width="180"
+                            height="180"
+                        >
+
+                        <a
+                            class="qr-download"
+                            href="{{ url_for('main.download_qr', code=short_code) }}"
+                        >
+                            Download QR code ↓
+                        </a>
+                    </div>
                 </section>
                 {% endif %}
             </div>
@@ -94,14 +123,16 @@
             <div class="feature-grid">
                 <article class="feature">
                     <span class="feature-icon">↗</span>
-                    <h3>Short & shareable</h3>
+                    <h3>Short &amp; shareable</h3>
                     <p>Make long URLs easier to share.</p>
                 </article>
+
                 <article class="feature">
                     <span class="feature-icon">▥</span>
                     <h3>Click analytics</h3>
                     <p>Monitor clicks on your short links.</p>
                 </article>
+
                 <article class="feature">
                     <span class="feature-icon">⌁</span>
                     <h3>Easy management</h3>
@@ -134,11 +165,14 @@
                     copyStatus.textContent = "Link copied successfully!";
                     copyButton.textContent = "Copied!";
                 } catch (error) {
-                    const temporaryInput = document.createElement("textarea");
+                    const temporaryInput =
+                        document.createElement("textarea");
+
                     temporaryInput.value = text;
                     temporaryInput.setAttribute("readonly", "");
                     temporaryInput.style.position = "fixed";
                     temporaryInput.style.opacity = "0";
+
                     document.body.appendChild(temporaryInput);
                     temporaryInput.select();
                     temporaryInput.setSelectionRange(0, text.length);
@@ -154,7 +188,8 @@
                     temporaryInput.remove();
 
                     if (copied) {
-                        copyStatus.textContent = "Link copied successfully!";
+                        copyStatus.textContent =
+                            "Link copied successfully!";
                         copyButton.textContent = "Copied!";
                     } else {
                         copyStatus.textContent =

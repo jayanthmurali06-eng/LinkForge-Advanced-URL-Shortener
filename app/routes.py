@@ -1,19 +1,22 @@
 
-import sqlite3
+import io
 import secrets
+import sqlite3
 import string
 from datetime import datetime
 from pathlib import Path
-from zoneinfo import ZoneInfo
 from urllib.parse import urlparse
+from zoneinfo import ZoneInfo
 
+import qrcode
 from flask import (
     Blueprint,
+    abort,
+    redirect,
     render_template,
     request,
-    redirect,
+    send_file,
     url_for,
-    abort,
 )
 
 main = Blueprint("main", __name__)
@@ -62,11 +65,7 @@ def init_db():
 def generate_code(length=7):
     """Generate a cryptographically random short code."""
     characters = string.ascii_letters + string.digits
-
-    return "".join(
-        secrets.choice(characters)
-        for _ in range(length)
-    )
+    return "".join(secrets.choice(characters) for _ in range(length))
 
 
 def is_valid_url(value):
@@ -86,13 +85,11 @@ def is_valid_url(value):
         if not parsed.hostname:
             return False
 
-        # Avoid URLs containing embedded login credentials.
+        # Do not accept URLs containing embedded login credentials.
         if parsed.username is not None or parsed.password is not None:
             return False
 
-        # Accessing .port raises ValueError for malformed ports.
         port = parsed.port
-
         if port is not None and not (1 <= port <= 65535):
             return False
 
@@ -121,11 +118,59 @@ def format_ist(timestamp):
         return str(timestamp)
 
 
+def get_link(code):
+    """Find a short link by its code."""
+    with get_db() as db:
+        return db.execute(
+            """
+            SELECT code, original_url
+            FROM links
+            WHERE code = ?
+            """,
+            (code,),
+        ).fetchone()
+
+
+def make_qr_image(code):
+    """Create a QR code image for an existing short link."""
+    link = get_link(code)
+
+    if link is None:
+        abort(404)
+
+    short_url = url_for(
+        "main.redirect_to_original",
+        code=code,
+        _external=True,
+    )
+
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(short_url)
+    qr.make(fit=True)
+
+    image = qr.make_image(
+        fill_color="black",
+        back_color="white",
+    )
+
+    image_buffer = io.BytesIO()
+    image.save(image_buffer, format="PNG")
+    image_buffer.seek(0)
+
+    return image_buffer
+
+
 @main.route("/", methods=["GET", "POST"])
 def index():
     init_db()
 
     short_url = None
+    short_code = None
     error = None
 
     if request.method == "POST":
@@ -162,7 +207,6 @@ def index():
                         "Could not generate a link. "
                         "Please try again."
                     )
-
                 else:
                     db.execute(
                         """
@@ -172,15 +216,15 @@ def index():
                         (code, original_url),
                     )
 
+                    short_code = code
                     short_url = (
-                        request.url_root.rstrip("/")
-                        + "/"
-                        + code
+                        request.url_root.rstrip("/") + "/" + code
                     )
 
     return render_template(
         "index.html",
         short_url=short_url,
+        short_code=short_code,
         error=error,
     )
 
@@ -221,7 +265,7 @@ def analytics():
 
 @main.route("/delete/<code>", methods=["POST"])
 def delete_link(code):
-    """Delete a short link selected from the analytics dashboard."""
+    """Delete a short link from the analytics dashboard."""
     init_db()
 
     with get_db() as db:
@@ -236,25 +280,58 @@ def delete_link(code):
     return redirect(url_for("main.analytics"))
 
 
+@main.route("/qr/<code>", methods=["GET"])
+def generate_qr(code):
+    """Display a QR code image in the browser."""
+    init_db()
+    image_buffer = make_qr_image(code)
+
+    # Inline response lets the image display inside the webpage.
+    return send_file(
+        image_buffer,
+        mimetype="image/png",
+        as_attachment=False,
+        download_name=f"linkforge-{code}-qr.png",
+    )
+
+
+@main.route("/qr/<code>/download", methods=["GET"])
+def download_qr(code):
+    """Download a QR code as a PNG image."""
+    init_db()
+    image_buffer = make_qr_image(code)
+
+    return send_file(
+        image_buffer,
+        mimetype="image/png",
+        as_attachment=True,
+        download_name=f"linkforge-{code}-qr.png",
+    )
+
+
 @main.route("/<code>", methods=["GET"])
 def redirect_to_original(code):
-    """Redirect to the destination and record the click."""
+    """Redirect to the original URL and record the click."""
     init_db()
 
     with get_db() as db:
         link = db.execute(
-            "SELECT original_url FROM links WHERE code = ?",
+            """
+            SELECT original_url
+            FROM links
+            WHERE code = ?
+            """,
             (code,),
         ).fetchone()
 
         if link is None:
             abort(404)
 
-        original_url = link["original_url"]
-
         db.execute(
             "UPDATE links SET clicks = clicks + 1 WHERE code = ?",
             (code,),
         )
+
+        original_url = link["original_url"]
 
     return redirect(original_url)
